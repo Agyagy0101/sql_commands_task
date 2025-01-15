@@ -1,0 +1,187 @@
+
+-- Database Creation
+CREATE DATABASE IMDB;
+USE IMDB;
+
+-- Movies Table
+CREATE TABLE Movies (
+    movie_id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    release_date DATE,
+    description TEXT
+);
+
+-- Media Table (Video/Image for Movies)
+CREATE TABLE Media (
+    media_id INT AUTO_INCREMENT PRIMARY KEY,
+    movie_id INT NOT NULL,
+    media_type ENUM('Video', 'Image') NOT NULL,
+    media_url VARCHAR(255) NOT NULL,
+    FOREIGN KEY (movie_id) REFERENCES Movies(movie_id) ON DELETE CASCADE
+);
+
+-- Genres Table
+CREATE TABLE Genres (
+    genre_id INT AUTO_INCREMENT PRIMARY KEY,
+    genre_name VARCHAR(50) NOT NULL
+);
+
+-- Movie_Genres (Many-to-Many Relationship between Movies and Genres)
+CREATE TABLE Movie_Genres (
+    movie_id INT NOT NULL,
+    genre_id INT NOT NULL,
+    PRIMARY KEY (movie_id, genre_id),
+    FOREIGN KEY (movie_id) REFERENCES Movies(movie_id) ON DELETE CASCADE,
+    FOREIGN KEY (genre_id) REFERENCES Genres(genre_id) ON DELETE CASCADE
+);
+
+-- Users Table
+CREATE TABLE Users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE
+);
+
+-- Reviews Table
+CREATE TABLE Reviews (
+    review_id INT AUTO_INCREMENT PRIMARY KEY,
+    movie_id INT NOT NULL,
+    user_id INT NOT NULL,
+    review_text TEXT,
+    rating INT CHECK (rating BETWEEN 1 AND 10),
+    FOREIGN KEY (movie_id) REFERENCES Movies(movie_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
+);
+
+-- Artists Table
+CREATE TABLE Artists (
+    artist_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    date_of_birth DATE
+);
+
+-- Skills Table
+CREATE TABLE Skills (
+    skill_id INT AUTO_INCREMENT PRIMARY KEY,
+    skill_name VARCHAR(50) NOT NULL
+);
+
+-- Artist_Skills (Many-to-Many Relationship between Artists and Skills)
+CREATE TABLE Artist_Skills (
+    artist_id INT NOT NULL,
+    skill_id INT NOT NULL,
+    PRIMARY KEY (artist_id, skill_id),
+    FOREIGN KEY (artist_id) REFERENCES Artists(artist_id) ON DELETE CASCADE,
+    FOREIGN KEY (skill_id) REFERENCES Skills(skill_id) ON DELETE CASCADE
+);
+
+-- Roles Table
+CREATE TABLE Roles (
+    role_id INT AUTO_INCREMENT PRIMARY KEY,
+    role_name VARCHAR(50) NOT NULL
+);
+
+-- Movie_Artists (Many-to-Many Relationship between Movies and Artists with Roles)
+CREATE TABLE Movie_Artists (
+    movie_id INT NOT NULL,
+    artist_id INT NOT NULL,
+    role_id INT NOT NULL,
+    PRIMARY KEY (movie_id, artist_id, role_id),
+    FOREIGN KEY (movie_id) REFERENCES Movies(movie_id) ON DELETE CASCADE,
+    FOREIGN KEY (artist_id) REFERENCES Artists(artist_id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES Roles(role_id) ON DELETE CASCADE
+);
+
+-- Sample Data Insertion
+-- Movies
+INSERT INTO Movies (title, release_date, description) VALUES
+('Inception', '2010-07-16', 'A thief who steals corporate secrets through the use of dream-sharing technology.'),
+('The Matrix', '1999-03-31', 'A hacker discovers the reality he lives in is a simulation.');
+
+-- Media
+INSERT INTO Media (movie_id, media_type, media_url) VALUES
+(1, 'Video', 'https://example.com/inception-trailer.mp4'),
+(1, 'Image', 'https://example.com/inception-poster.jpg'),
+(2, 'Video', 'https://example.com/matrix-trailer.mp4');
+
+-- Genres
+INSERT INTO Genres (genre_name) VALUES
+('Sci-Fi'),
+('Action'),
+('Thriller');
+
+-- Movie_Genres
+INSERT INTO Movie_Genres (movie_id, genre_id) VALUES
+(1, 1),
+(1, 3),
+(2, 1),
+(2, 2);
+
+-- Users
+INSERT INTO Users (username, email) VALUES
+('john_doe', 'john@example.com'),
+('jane_smith', 'jane@example.com');
+
+-- Reviews
+INSERT INTO Reviews (movie_id, user_id, review_text, rating) VALUES
+(1, 1, 'Amazing concept and execution!', 9),
+(2, 2, 'Revolutionary movie for its time.', 10);
+
+-- Artists
+INSERT INTO Artists (name, date_of_birth) VALUES
+('Leonardo DiCaprio', '1974-11-11'),
+('Keanu Reeves', '1964-09-02');
+
+-- Skills
+INSERT INTO Skills (skill_name) VALUES
+('Acting'),
+('Directing');
+
+-- Artist_Skills
+INSERT INTO Artist_Skills (artist_id, skill_id) VALUES
+(1, 1),
+(2, 1);
+
+-- Roles
+INSERT INTO Roles (role_name) VALUES
+('Actor'),
+('Director');
+
+-- Movie_Artists
+INSERT INTO Movie_Artists (movie_id, artist_id, role_id) VALUES
+(1, 1, 1),
+(2, 2, 1);
+
+---Select queries to view
+
+SELECT m.title AS Movie_Title, d.media_type, d.media_url
+FROM Movies m
+JOIN Media d ON m.movie_id = d.movie_id;
+
+SELECT m.title AS Movie_Title, g.genre_name AS Genre
+FROM Movies m
+JOIN Movie_Genres mg ON m.movie_id = mg.movie_id
+JOIN Genres g ON mg.genre_id = g.genre_id;
+
+SELECT a.name AS Artist_Name, s.skill_name AS Skill
+FROM Artists a
+JOIN Artist_Skills ask ON a.artist_id = ask.artist_id
+JOIN Skills s ON ask.skill_id = s.skill_id;
+
+SELECT m.title AS Movie_Title, a.name AS Artist_Name, r.role_name AS Role
+FROM Movies m
+JOIN Movie_Artists ma ON m.movie_id = ma.movie_id
+JOIN Artists a ON ma.artist_id = a.artist_id
+JOIN Roles r ON ma.role_id = r.role_id;
+
+SELECT m.title AS Movie_Title, a.name AS Actor_Name
+FROM Movies m
+JOIN Movie_Artists ma ON m.movie_id = ma.movie_id
+JOIN Artists a ON ma.artist_id = a.artist_id
+JOIN Roles r ON ma.role_id = r.role_id
+WHERE r.role_name = 'Actor';
+
+SELECT m.title AS Movie_Title, AVG(r.rating) AS Average_Rating
+FROM Movies m
+JOIN Reviews r ON m.movie_id = r.movie_id
+GROUP BY m.movie_id, m.title;
